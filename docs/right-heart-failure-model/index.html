@@ -35,11 +35,27 @@
   }
   header h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: .2px; }
   header p { margin: 0; color: var(--muted); font-size: 13.5px; max-width: 880px; }
+  .disclaimer {
+    display: inline-block; margin-top: 10px; padding: 7px 10px; border-radius: 7px;
+    border: 1px solid rgba(210,153,34,.45); background: rgba(210,153,34,.09);
+    color: #e7bd63; font-size: 12px;
+  }
   .wrap {
     max-width: 1280px; margin: 0 auto; padding: 18px;
     display: grid; grid-template-columns: 320px 1fr 320px; gap: 18px;
   }
-  @media (max-width: 1100px) { .wrap { grid-template-columns: 1fr; } }
+  @media (max-width: 1100px) {
+    .wrap { grid-template-columns: 1fr; }
+    .controls { order: 1; }
+    .readouts { order: 2; }
+    .stage { order: 3; }
+  }
+  @media (max-width: 420px) {
+    header { padding-inline: 18px; }
+    .wrap { padding: 12px; gap: 12px; }
+    .panel { padding: 14px; }
+    .vitals { grid-template-columns: 1fr; }
+  }
   .panel {
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 12px; padding: 16px;
@@ -54,6 +70,9 @@
     width: 100%; -webkit-appearance: none; appearance: none; height: 6px;
     border-radius: 4px; background: var(--panel-2); outline: none;
   }
+  input[type=range]:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 3px solid rgba(78,161,255,.55); outline-offset: 3px;
+  }
   input[type=range]::-webkit-slider-thumb {
     -webkit-appearance: none; appearance: none; width: 18px; height: 18px;
     border-radius: 50%; background: var(--accent); cursor: pointer; border: 3px solid #0e1116;
@@ -64,6 +83,13 @@
     cursor: pointer; border: 3px solid #0e1116;
   }
   .hint { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+  select {
+    width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--panel-2); color: var(--text); font: inherit;
+  }
+  .section-note {
+    margin: -4px 0 12px; color: var(--muted); font-size: 11.5px;
+  }
 
   .presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
   .preset {
@@ -98,13 +124,19 @@
   .signs { display: flex; flex-direction: column; gap: 8px; }
   .sign {
     display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px;
-    background: var(--panel-2); border: 1px solid var(--border); font-size: 13px; opacity: .45; transition: .25s;
+    background: var(--panel-2); border: 1px solid var(--border); font-size: 13px;
+    transition: border-color .25s, background .25s;
   }
-  .sign.on { opacity: 1; border-color: var(--bad); background: rgba(248,81,73,.08); }
+  .sign.on { border-color: var(--bad); background: rgba(248,81,73,.08); }
   .sign .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); flex: none; }
   .sign.on .dot { background: var(--bad); box-shadow: 0 0 8px var(--bad); }
   .sign .lbl { flex: 1; }
-  .sign .desc { font-size: 11px; color: var(--muted); }
+  .sign .desc { display: block; font-size: 11px; color: var(--muted); }
+  .sign .state {
+    flex: none; padding: 2px 6px; border-radius: 999px; background: var(--border);
+    color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .35px;
+  }
+  .sign.on .state { background: rgba(248,81,73,.16); color: #ff9b96; }
 
   details { margin-top: 8px; border-top: 1px solid var(--border); padding-top: 10px; }
   summary { cursor: pointer; font-size: 13px; color: var(--accent); }
@@ -124,40 +156,50 @@
   <h1>&#129000; Interactive Model of Right Heart Failure</h1>
   <p>Adjust the right ventricle&rsquo;s loading conditions and contractility to see how forward output and systemic
      venous congestion change. The engine couples a Frank&ndash;Starling cardiac-function curve with a Guyton
-     venous-return curve and solves for the operating point, then maps it to bedside signs.</p>
+     venous-return curve and solves for the operating point, then maps it to illustrative bedside tendencies.</p>
+  <div class="disclaimer">Conceptual teaching model &mdash; not validated, patient-specific, diagnostic, or treatment guidance.</div>
 </header>
 
 <div class="wrap">
 
   <!-- LEFT: Controls -->
-  <section class="panel">
+  <section class="panel controls">
     <h2>Clinical scenarios</h2>
     <div class="presets" id="presets"></div>
 
     <h2 style="margin-top:18px">Determinants</h2>
 
     <div class="ctrl">
-      <label>Preload / volume status <span class="val" id="vPreload"></span></label>
+      <label for="preload">Stressed volume / venous tone <span class="val" id="vPreload" aria-hidden="true"></span></label>
       <input type="range" id="preload" min="40" max="180" value="100" step="1" />
-      <div class="hint">Circulating volume &amp; venous tone &rarr; mean systemic filling pressure</div>
+      <div class="hint">Relative model input &rarr; mean systemic filling pressure; not a measured blood-volume percentage.</div>
     </div>
 
     <div class="ctrl">
-      <label>RV afterload (pulm. artery pressure) <span class="val" id="vAfterload"></span></label>
+      <label for="afterload">RV afterload index <span class="val" id="vAfterload" aria-hidden="true"></span></label>
       <input type="range" id="afterload" min="15" max="80" value="22" step="1" />
-      <div class="hint">Pulmonary vascular resistance / PA systolic pressure. The thin-walled RV is exquisitely afterload-sensitive.</div>
+      <div class="hint">Relative model input, not PASP or PVR. True RV afterload depends on resistance, pulmonary compliance, and wave reflection.</div>
     </div>
 
     <div class="ctrl">
-      <label>RV contractility <span class="val" id="vContractility"></span></label>
+      <label for="contractility">RV contractility index <span class="val" id="vContractility" aria-hidden="true"></span></label>
       <input type="range" id="contractility" min="10" max="150" value="100" step="1" />
-      <div class="hint">Intrinsic inotropy of the right ventricle (ischaemia, infarct, depressants lower it).</div>
+      <div class="hint">Relative model input for intrinsic inotropy; not an ejection fraction or measured contractility.</div>
     </div>
 
     <div class="ctrl">
-      <label>Heart rate <span class="val" id="vHr"></span></label>
+      <label for="hr">Heart rate <span class="val" id="vHr" aria-hidden="true"></span></label>
       <input type="range" id="hr" min="40" max="160" value="72" step="1" />
-      <div class="hint">Beats per minute.</div>
+      <div class="hint">Competing rate and filling-time effects are represented schematically; rhythm and AV synchrony are not modeled.</div>
+    </div>
+
+    <div class="ctrl">
+      <label for="timecourse">Congestion time course</label>
+      <select id="timecourse">
+        <option value="acute">Acute / short-lived</option>
+        <option value="persistent">Persistent / chronic</option>
+      </select>
+      <div class="hint">Only modifies time-dependent signs such as edema and ascites; it does not change the hemodynamic solver.</div>
     </div>
 
     <details>
@@ -165,20 +207,25 @@
       <p>Steady-state cardiac output is found where the RV function curve
       <em>CO = P&middot;(1&minus;e<sup>&minus;(RAP+2)/3</sup>)</em> crosses the venous-return line
       <em>VR = (MSFP &minus; RAP)/R<sub>VR</sub></em>. The plateau <em>P</em> rises with contractility and heart
-      rate and falls steeply with afterload (RV-specific). The crossing gives right-atrial pressure (&asymp; CVP &asymp; JVP)
-      and forward output, which drive the congestion signs. Numbers are illustrative, not for clinical use.</p>
+      rate over a limited range and falls with afterload. The crossing gives right-atrial pressure and forward output.
+      RAP/CVP are pressures; JVP is an examination estimate of that pressure, not an interchangeable unit.</p>
+      <p>The equations and all threshold mappings are hand-tuned for concept demonstration. They are not a validated
+      cardiovascular model and must not be used to infer a patient&rsquo;s hemodynamics or treatment.</p>
     </details>
   </section>
 
   <!-- CENTER: Visualization -->
   <section class="stage">
     <div class="heartbox">
-      <svg id="heart" viewBox="0 0 460 340" aria-label="Heart and venous system schematic"></svg>
+      <svg id="heart" viewBox="0 0 460 340" role="img" aria-label="Conceptual heart and venous system schematic"></svg>
     </div>
 
     <div class="panel">
       <h2>Cardiac function &amp; venous return</h2>
-      <canvas id="plot" width="900" height="420"></canvas>
+      <canvas id="plot" width="900" height="420" role="img"
+              aria-label="Cardiac function and venous return curves. Numerical operating point is repeated in the hemodynamics panel.">
+        Cardiac function and venous return curve plot; numerical values are listed in the hemodynamics panel.
+      </canvas>
       <div class="legend">
         <span><i style="background:#c1453b"></i> RV function curve</span>
         <span><i style="background:#4ea1ff"></i> Venous return curve</span>
@@ -189,24 +236,25 @@
   </section>
 
   <!-- RIGHT: Readouts -->
-  <section class="panel">
+  <section class="panel readouts">
     <h2>Hemodynamics</h2>
-    <div id="status" class="status s-good">Compensated</div>
+    <div id="status" class="status s-good" role="status" aria-live="polite">Reference operating point</div>
     <div class="vitals" id="vitals"></div>
 
-    <h2 style="margin-top:18px">Clinical signs</h2>
+    <h2 style="margin-top:18px">Possible bedside findings</h2>
+    <p class="section-note">Model tendencies only. A highlighted item is not a diagnosis or a guaranteed finding.</p>
     <div class="signs" id="signs"></div>
 
     <details open>
       <summary>What&rsquo;s happening?</summary>
-      <p id="explain"></p>
+      <p id="explain" aria-live="polite"></p>
     </details>
   </section>
 
 </div>
 
 <footer>
-  Educational simulation &mdash; simplified Guyton/Frank&ndash;Starling coupling. Not a substitute for clinical judgment.
+  Educational simulation &mdash; simplified Guyton/Frank&ndash;Starling coupling. Not for diagnosis, monitoring, or treatment decisions.
 </footer>
 
 <script>
@@ -221,24 +269,27 @@
     contractility: $("contractility"),
     hr: $("hr"),
   };
-  const NORMAL_AFTERLOAD = 22; // PA systolic, mmHg (reference)
+  const timecourse = $("timecourse");
+  const NORMAL_AFTERLOAD = 22; // relative model reference, not a measured pressure
+  const CM_H2O_PER_MMHG = 1.36;
+  const STERNAL_ANGLE_TO_RA_CM = 5; // conventional bedside approximation
 
   // ---- Physiology engine ----
-  // Returns { rap, co, vrCurve, cfCurve, plateau, mfsp }
+  // Returns the modeled operating point and both curve functions.
   function solve(p) {
-    const volFactor   = p.preload / 100;            // 0.4 - 1.6
+    const volFactor   = p.preload / 100;            // 0.4 - 1.8
     const contractF   = p.contractility / 100;       // 0.1 - 1.5
-    const hrF         = clamp(p.hr / 72, 0.55, 1.6);  // heart-rate scaling
+    const hrF         = heartRateFactor(p.hr);
 
-    // Mean systemic filling pressure rises with volume / venous tone. Fluid
-    // retention in chronic failure expands volume super-linearly → high MSFP.
+    // Mean systemic filling pressure rises with the normalized combination of
+    // stressed volume and venous tone. The exponent is hand-tuned for teaching.
     const MSFP = 7 * Math.pow(volFactor, 1.35);        // ~7 mmHg normal
     const Rvr  = 0.9;                                 // resistance to venous return (mmHg per L/min)
 
-    // RV is very afterload-sensitive: plateau falls sharply as PA pressure climbs.
+    // RV is very afterload-sensitive: the plateau falls as the afterload index rises.
     const afterloadFactor = clamp(Math.pow(NORMAL_AFTERLOAD / p.afterload, 0.7), 0.25, 1.15);
     const plateauBase = 7.2;                          // L/min normal plateau
-    const plateau = plateauBase * contractF * Math.pow(hrF, 0.6) * afterloadFactor;
+    const plateau = plateauBase * contractF * hrF * afterloadFactor;
 
     // Cardiac function curve: CO(rap) = plateau * (1 - exp(-(rap+2)/3))
     const cf = rap => rap <= -2 ? 0 : plateau * (1 - Math.exp(-(rap + 2) / 3));
@@ -260,10 +311,17 @@
       }
       prevDiff = diff;
     }
-    return { rap, co, cf, vr, plateau, MSFP, afterloadFactor };
+    return { rap, co, cf, vr, plateau, MSFP, afterloadFactor, hrFactor: hrF };
   }
 
   function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
+  function heartRateFactor(hr) {
+    // Schematic only: rate supports output from bradycardia into a broad middle
+    // range, while marked tachycardia is penalized for shorter filling time.
+    if (hr <= 72) return 0.70 + 0.30 * ((hr - 40) / 32);
+    if (hr <= 100) return 1 + 0.08 * ((hr - 72) / 28);
+    return 1.08 - 0.43 * Math.pow((hr - 100) / 60, 1.15);
+  }
   function lerpColor(a, b, t) {
     const pa = a.match(/\w\w/g).map(h => parseInt(h, 16));
     const pb = b.match(/\w\w/g).map(h => parseInt(h, 16));
@@ -273,30 +331,36 @@
 
   // ---- Presets ----
   const presets = [
-    { name: "Normal",                 preload: 100, afterload: 22, contractility: 100, hr: 72 },
-    { name: "Pulmonary hypertension", preload: 112, afterload: 62, contractility: 95,  hr: 84 },
-    { name: "Acute pulm. embolism",   preload: 105, afterload: 72, contractility: 80,  hr: 120 },
-    { name: "RV infarction",          preload: 125, afterload: 24, contractility: 35,  hr: 70 },
-    { name: "Cor pulmonale (COPD)",   preload: 140, afterload: 50, contractility: 72,  hr: 92 },
-    { name: "Decompensated RHF",      preload: 175, afterload: 58, contractility: 42,  hr: 108 },
-    { name: "Hypovolemia",            preload: 55,  afterload: 20, contractility: 100, hr: 100 },
+    { name: "Normal",                 preload: 100, afterload: 22, contractility: 100, hr: 72,  timecourse: "acute" },
+    { name: "Pulmonary hypertension", preload: 112, afterload: 62, contractility: 95,  hr: 84,  timecourse: "persistent" },
+    { name: "Acute pulm. embolism",   preload: 105, afterload: 72, contractility: 80,  hr: 120, timecourse: "acute" },
+    { name: "RV infarction",          preload: 125, afterload: 24, contractility: 35,  hr: 70,  timecourse: "acute" },
+    { name: "Cor pulmonale (COPD)",   preload: 140, afterload: 50, contractility: 72,  hr: 92,  timecourse: "persistent" },
+    { name: "Decompensated RHF",      preload: 175, afterload: 58, contractility: 42,  hr: 108, timecourse: "persistent" },
+    { name: "Hypovolemia",            preload: 55,  afterload: 20, contractility: 100, hr: 100, timecourse: "acute" },
   ];
 
   const presetsEl = $("presets");
   presets.forEach((ps, i) => {
     const b = document.createElement("button");
     b.className = "preset"; b.textContent = ps.name; b.dataset.i = i;
+    b.setAttribute("aria-pressed", "false");
     b.onclick = () => { applyPreset(ps); setActive(i); };
     presetsEl.appendChild(b);
   });
   function setActive(i) {
-    [...presetsEl.children].forEach(c => c.classList.toggle("active", +c.dataset.i === i));
+    [...presetsEl.children].forEach(c => {
+      const active = +c.dataset.i === i;
+      c.classList.toggle("active", active);
+      c.setAttribute("aria-pressed", String(active));
+    });
   }
   function applyPreset(ps) {
     sliders.preload.value = ps.preload;
     sliders.afterload.value = ps.afterload;
     sliders.contractility.value = ps.contractility;
     sliders.hr.value = ps.hr;
+    timecourse.value = ps.timecourse;
     render();
   }
 
@@ -304,8 +368,8 @@
   const vitalDefs = [
     { k: "Cardiac output", id: "co", u: "L/min" },
     { k: "RA pressure (CVP)", id: "rap", u: "mmHg" },
-    { k: "JVP height", id: "jvp", u: "cm" },
-    { k: "Cardiac index", id: "ci", u: "L/min/m²" },
+    { k: "Est. JVP above sternal angle", id: "jvp", u: "cm" },
+    { k: "Cardiac index (BSA 1.9)", id: "ci", u: "L/min/m²" },
   ];
   const vitalsEl = $("vitals");
   vitalDefs.forEach(v => {
@@ -317,19 +381,19 @@
 
   // ---- Signs ----
   const signDefs = [
-    { id: "jvp",   lbl: "Raised JVP",            desc: "RAP > 6 mmHg" },
-    { id: "hjr",   lbl: "Hepatojugular reflux",  desc: "Congested venous system" },
-    { id: "hepat", lbl: "Tender hepatomegaly",   desc: "Hepatic venous congestion" },
-    { id: "edema", lbl: "Peripheral edema",      desc: "Chronic high venous pressure" },
-    { id: "asc",   lbl: "Ascites",               desc: "Severe systemic congestion" },
-    { id: "fatig", lbl: "Fatigue / low output",  desc: "Reduced forward flow" },
-    { id: "cool",  lbl: "Cool peripheries",      desc: "Poor perfusion (CI low)" },
+    { id: "jvp",   lbl: "Raised JVP",                    desc: "Estimated height > 4 cm above sternal angle" },
+    { id: "hjr",   lbl: "Positive abdominojugular test", desc: "Sustained JVP rise may occur with limited RV reserve" },
+    { id: "hepat", lbl: "Tender hepatomegaly",           desc: "May accompany hepatic venous congestion" },
+    { id: "edema", lbl: "Peripheral edema",              desc: "Requires persistent congestion in this model" },
+    { id: "asc",   lbl: "Ascites",                       desc: "Requires severe, persistent congestion in this model" },
+    { id: "fatig", lbl: "Fatigue / low output",          desc: "Possible with reduced forward flow" },
+    { id: "cool",  lbl: "Cool peripheries",              desc: "Possible with marked low output" },
   ];
   const signsEl = $("signs");
   signDefs.forEach(s => {
     const d = document.createElement("div");
     d.className = "sign"; d.id = "sign-" + s.id;
-    d.innerHTML = `<span class="dot"></span><span class="lbl">${s.lbl}</span><span class="desc">${s.desc}</span>`;
+    d.innerHTML = `<span class="dot"></span><span class="lbl">${s.lbl}<span class="desc">${s.desc}</span></span><span class="state">less likely</span>`;
     signsEl.appendChild(d);
   });
 
@@ -399,8 +463,23 @@
 
   // ---- Plot ----
   const plot = $("plot"), pctx = plot.getContext("2d");
+  function sizePlotCanvas() {
+    const cssWidth = Math.max(280, Math.floor(plot.getBoundingClientRect().width));
+    const cssHeight = Math.max(260, Math.round(cssWidth * 420 / 900));
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const pixelWidth = Math.round(cssWidth * dpr);
+    const pixelHeight = Math.round(cssHeight * dpr);
+    if (plot.width !== pixelWidth || plot.height !== pixelHeight) {
+      plot.width = pixelWidth;
+      plot.height = pixelHeight;
+      plot.style.height = cssHeight + "px";
+    }
+    pctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { W: cssWidth, H: cssHeight };
+  }
   function drawPlot(st, normal) {
-    const W = plot.width, H = plot.height, padL = 54, padB = 40, padT = 18, padR = 18;
+    const { W, H } = sizePlotCanvas();
+    const padL = 54, padB = 40, padT = 18, padR = 18;
     const x0 = padL, x1 = W - padR, y0 = H - padB, y1 = padT;
     const RAPmin = -2, RAPmax = 18, COmax = 9;
     const sx = r => x0 + (r - RAPmin) / (RAPmax - RAPmin) * (x1 - x0);
@@ -461,11 +540,12 @@
       afterload: +sliders.afterload.value,
       contractility: +sliders.contractility.value,
       hr: +sliders.hr.value,
+      timecourse: timecourse.value,
     };
     // slider labels
-    $("vPreload").textContent = p.preload + "%";
-    $("vAfterload").textContent = p.afterload + " mmHg";
-    $("vContractility").textContent = p.contractility + "%";
+    $("vPreload").textContent = p.preload + " rel.";
+    $("vAfterload").textContent = p.afterload + " rel.";
+    $("vContractility").textContent = p.contractility + " rel.";
     $("vHr").textContent = p.hr + " bpm";
 
     const st = solve(p);
@@ -473,35 +553,41 @@
 
     // Derived clinical quantities
     const ci = st.co / 1.9;                    // cardiac index (BSA ~1.9)
-    const jvpCm = clamp((st.rap * 0.735) + 4, 2, 28); // approx JVP height in cm above sternal angle
-    st.edema = st.rap > 10;
+    const jvpCm = clamp((st.rap * CM_H2O_PER_MMHG) - STERNAL_ANGLE_TO_RA_CM, 0, 28);
+    const persistent = p.timecourse === "persistent";
+    st.edema = persistent && st.rap > 10;
 
     // Vitals
     setVital("co", st.co.toFixed(1), st.co, [3.5, 4, 6.5]);
     setVital("rap", st.rap.toFixed(0), st.rap, [8, 6, 16], true);
-    setVital("jvp", jvpCm.toFixed(0), jvpCm, [9, 7, 22], true);
+    setVital("jvp", jvpCm.toFixed(1), jvpCm, [4, 3, 18], true);
     setVital("ci", ci.toFixed(1), ci, [1.8, 2.2, 4]);
 
     // Signs (thresholds tuned to the model's achievable RAP range)
-    toggleSign("jvp",   st.rap > 6);
+    toggleSign("jvp",   jvpCm > 4);
     toggleSign("hjr",   st.rap > 7);
     toggleSign("hepat", st.rap > 8);
-    toggleSign("edema", st.rap > 10);
-    toggleSign("asc",   st.rap > 13);
+    toggleSign("edema", persistent && st.rap > 10);
+    toggleSign("asc",   persistent && st.rap > 13);
     toggleSign("fatig", st.co < 3.8);
     toggleSign("cool",  ci < 1.65);
 
     // Status banner
     const statusEl = $("status");
-    let cls = "s-good", txt = "Compensated — adequate output, normal filling pressures";
-    if (st.rap > 6 || st.co < 4) { cls = "s-warn"; txt = "Compensating — congestion or output reduction emerging"; }
-    if ((st.rap > 10 && st.co < 3.5) || st.co < 2.5 || st.rap > 13) {
-      cls = "s-bad"; txt = "Decompensated right heart failure — congestion + low output";
-    }
+    const elevatedRap = st.rap > 6;
+    const reducedOutput = ci < 2.2;
+    let cls = "s-good", txt = "Model state: reference-range operating point";
+    if (elevatedRap && !reducedOutput) { cls = "s-warn"; txt = "Model state: elevated right-sided filling pressure"; }
+    if (!elevatedRap && reducedOutput) { cls = "s-warn"; txt = "Model state: reduced forward output"; }
+    if (elevatedRap && reducedOutput) { cls = "s-bad"; txt = "Model state: elevated filling pressure + reduced output"; }
     statusEl.className = "status " + cls; statusEl.textContent = txt;
 
     // Explanation
     $("explain").innerHTML = explain(p, st, ci);
+    plot.setAttribute("aria-label",
+      `Cardiac function and venous return curves with operating point at RAP ${st.rap.toFixed(1)} mmHg and cardiac output ${st.co.toFixed(1)} L/min.`);
+    heart.setAttribute("aria-label",
+      `Conceptual heart and venous system schematic for modeled RAP ${st.rap.toFixed(1)} mmHg and cardiac output ${st.co.toFixed(1)} L/min.`);
 
     drawHeart(st);
     drawPlot(st, normal);
@@ -522,29 +608,45 @@
     }
     bar.style.background = color;
   }
-  function toggleSign(id, on) { $("sign-" + id).classList.toggle("on", !!on); }
+  function toggleSign(id, on) {
+    const el = $("sign-" + id);
+    el.classList.toggle("on", !!on);
+    el.querySelector(".state").textContent = on ? "more likely" : "less likely";
+  }
 
   function explain(p, st, ci) {
     const parts = [];
     if (p.afterload > 45)
-      parts.push(`Pulmonary artery pressure is high (${p.afterload} mmHg). Because the thin-walled RV can&rsquo;t generate much pressure, its output plateau collapses (afterload factor ${st.afterloadFactor.toFixed(2)}).`);
+      parts.push(`The relative afterload index is high (${p.afterload}), shifting the RV function curve down. It is not a PASP or PVR measurement.`);
     if (p.contractility < 60)
-      parts.push(`RV contractility is depressed (${p.contractility}%), shifting the function curve down — less output for any filling pressure.`);
+      parts.push(`The relative contractility index is low (${p.contractility}), shifting the function curve down — less output for any filling pressure.`);
     if (p.preload > 125)
-      parts.push(`Volume is expanded, raising mean systemic filling pressure to ${st.MSFP.toFixed(1)} mmHg and pushing the venous-return line up/right.`);
+      parts.push(`The stressed-volume/venous-tone input is high, raising modeled mean systemic filling pressure to ${st.MSFP.toFixed(1)} mmHg and shifting the venous-return line.`);
     if (p.preload < 70)
-      parts.push(`Low circulating volume drops mean systemic filling pressure (${st.MSFP.toFixed(1)} mmHg); output is preload-limited despite a normal heart.`);
+      parts.push(`A low stressed-volume input lowers modeled mean systemic filling pressure (${st.MSFP.toFixed(1)} mmHg), so output becomes venous-return limited.`);
+    if (p.hr > 120)
+      parts.push(`At this marked tachycardia setting, the model penalizes shorter filling time; the real response depends on rhythm, AV synchrony, loading and myocardial reserve.`);
+    if (p.hr < 50)
+      parts.push(`At this bradycardia setting, the lower rate reduces modeled output; stroke-volume compensation is simplified.`);
     if (st.rap > 10)
-      parts.push(`Right atrial pressure is ${st.rap.toFixed(0)} mmHg — blood dams back into the great veins, liver and periphery, producing the congestion signs at right.`);
+      parts.push(`Modeled right atrial pressure is ${st.rap.toFixed(0)} mmHg, increasing the tendency toward systemic venous congestion.`);
     if (st.co < 3.8)
-      parts.push(`Forward output (${st.co.toFixed(1)} L/min, CI ${ci.toFixed(1)}) is low, so tissues are underperfused: fatigue and cool peripheries.`);
+      parts.push(`Modeled forward output (${st.co.toFixed(1)} L/min; indexed ${ci.toFixed(1)} L/min/m² using an assumed BSA of 1.9 m²) is reduced, increasing the tendency toward low-output findings.`);
+    if (p.timecourse === "acute" && st.rap > 10)
+      parts.push(`The acute time course suppresses edema and ascites because those findings usually require persistent congestion.`);
     if (parts.length === 0)
-      parts.push(`The RV function and venous-return curves cross at a healthy operating point: RAP ${st.rap.toFixed(0)} mmHg, output ${st.co.toFixed(1)} L/min. No congestion, good perfusion.`);
+      parts.push(`The curves cross near this model&rsquo;s reference operating point: RAP ${st.rap.toFixed(0)} mmHg and output ${st.co.toFixed(1)} L/min. This is a conceptual reference, not a patient interpretation.`);
     return parts.join(" ");
   }
 
   // ---- Wire up ----
   Object.values(sliders).forEach(s => s.addEventListener("input", () => { render(); setActive(-1); }));
+  timecourse.addEventListener("change", () => { render(); setActive(-1); });
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(render, 100);
+  });
   setActive(0);
   render();
 })();
